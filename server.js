@@ -10,15 +10,15 @@ app.use(express.json());
 
 // ==================== 数据库配置 ====================
 const db = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '20060710Dy',
-    database: process.env.DB_NAME || 'defaultdb',
-    port: 21702,  // 明确指定端口
+    host: process.env.DB_HOST,  // 现在是 IP 地址
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: 21702,
     waitForConnections: true,
     connectionLimit: 10,
     ssl: {
-        rejectUnauthorized: false  // Aiven 需要 SSL
+        rejectUnauthorized: false  // Aiven 必须要有 SSL
     }
 });
 
