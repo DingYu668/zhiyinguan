@@ -8,24 +8,34 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==================== 数据库配置（修改为环境变量）====================
+// ==================== 数据库配置 ====================
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '20060710Dy',
-    database: process.env.DB_NAME || 'zhiguanguan',
+    database: process.env.DB_NAME || 'defaultdb',
     waitForConnections: true,
     connectionLimit: 10,
-    // 添加SSL配置（Render需要）
     ssl: process.env.DB_SSL ? { rejectUnauthorized: false } : undefined
 });
 
-// 测试数据库连接
+// 测试数据库连接并输出详细错误
 db.getConnection((err, connection) => {
     if (err) {
-        console.error('❌ 数据库连接失败:', err.message);
+        console.error('❌ 数据库连接失败，详细错误：', {
+            message: err.message,
+            code: err.code,
+            errno: err.errno,
+            sqlState: err.sqlState,
+            stack: err.stack
+        });
     } else {
         console.log('✅ 数据库连接成功');
+        console.log('✅ 连接信息:', {
+            host: process.env.DB_HOST,
+            database: process.env.DB_NAME,
+            user: process.env.DB_USER
+        });
         connection.release();
     }
 });
