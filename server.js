@@ -7,19 +7,14 @@ const bcrypt = require('bcrypt');
 const app = express();
 app.use(cors());
 app.use(express.json());
-// 添加 /api 前缀支持
-app.use('/api', (req, res, next) => {
-  // 把 /api/xxx 转发到 /xxx
-  req.url = req.url.replace('/api', '');
-  next();
-});
+
 // ==================== 数据库配置 ====================
 const db = mysql.createPool({
-    host: process.env.DB_HOST,           // 只填 IP: 139.59.29.204
-    port: parseInt(process.env.DB_PORT) || 21702,  // 单独端口变量
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    host: process.env.DB_HOST || '139.59.29.204',
+    port: parseInt(process.env.DB_PORT) || 21702,
+    user: process.env.DB_USER || 'avnadmin',
+    password: process.env.DB_PASSWORD || 'AVNS_2lbqHHqt15YCEK81W97',
+    database: process.env.DB_NAME || 'defaultdb',
     waitForConnections: true,
     connectionLimit: 10,
     ssl: {
@@ -27,7 +22,7 @@ const db = mysql.createPool({
     }
 });
 
-// 测试数据库连接并输出详细错误
+// 测试数据库连接
 db.getConnection((err, connection) => {
     if (err) {
         console.error('❌ 数据库连接失败，详细错误：', {
@@ -48,7 +43,8 @@ db.getConnection((err, connection) => {
         connection.release();
     }
 });
-// ==================== 根路由（测试用）====================
+
+// ==================== 根路由 ====================
 app.get('/', (req, res) => {
     res.json({ 
         message: '职引官API运行中',
@@ -57,39 +53,34 @@ app.get('/', (req, res) => {
     });
 });
 
-// ==================== 用户API ====================
+// ==================== API路由 ====================
 
-// 注册
-app.post('/api/register', async (req, res) => {
-    const { username, password, nickname } = req.body;
-    
-    try {
-        const [existing] = await db.promise().query(
-            'SELECT * FROM users WHERE username = ?',
-            [username]
-        );
-
-        if (existing.length > 0) {
-            return res.status(400).json({ error: '用户名已存在' });
+// API根路径 - 显示所有可用接口
+app.get('/api', (req, res) => {
+    res.json({
+        message: '职引官API服务',
+        version: '1.0.0',
+        endpoints: {
+            auth: ['POST /api/login', 'POST /api/register'],
+            knowledge: ['GET /api/knowledge', 'GET /api/knowledge/:id'],
+            mentors: ['GET /api/mentors', 'GET /api/mentors/:id'],
+            forum: ['GET /api/forum/posts', 'GET /api/forum/post/:id'],
+            interview: ['POST /api/interview/save', 'GET /api/interview/history/:userId'],
+            health: ['GET /api/health']
         }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await db.promise().query(
-            'INSERT INTO users (username, password, nickname, points) VALUES (?, ?, ?, 100)',
-            [username, hashedPassword, nickname || username]
-        );
-
-        res.json({ success: true, message: '注册成功' });
-    } catch (error) {
-        console.error('注册错误:', error);
-        res.status(500).json({ error: error.message });
-    }
+    });
 });
+
+// ==================== 用户API ====================
 
 // 登录
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: '请输入用户名和密码' });
+    }
+    
     try {
         const [users] = await db.promise().query(
             'SELECT * FROM users WHERE username = ?',
@@ -112,6 +103,37 @@ app.post('/api/login', async (req, res) => {
         res.json({ success: true, user: userWithoutPassword });
     } catch (error) {
         console.error('登录错误:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 注册
+app.post('/api/register', async (req, res) => {
+    const { username, password, nickname } = req.body;
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: '请输入用户名和密码' });
+    }
+    
+    try {
+        const [existing] = await db.promise().query(
+            'SELECT * FROM users WHERE username = ?',
+            [username]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({ error: '用户名已存在' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await db.promise().query(
+            'INSERT INTO users (username, password, nickname, points) VALUES (?, ?, ?, 100)',
+            [username, hashedPassword, nickname || username]
+        );
+
+        res.json({ success: true, message: '注册成功' });
+    } catch (error) {
+        console.error('注册错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -144,7 +166,7 @@ app.get('/api/knowledge', async (req, res) => {
     }
 });
 
-// 按岗位搜索
+// 按关键词搜索
 app.get('/api/knowledge/search/:keyword', async (req, res) => {
     try {
         const keyword = `%${req.params.keyword}%`;
@@ -166,97 +188,6 @@ app.get('/api/knowledge/:id', async (req, res) => {
             [req.params.id]
         );
         res.json(rows[0] || {});
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ==================== 论坛API ====================
-
-// 获取所有帖子
-app.get('/api/forum/posts', async (req, res) => {
-    try {
-        const [rows] = await db.promise().query(
-            `SELECT p.*, u.nickname as author_name,
-            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as reply_count
-            FROM forum_posts p
-            LEFT JOIN users u ON p.user_id = u.id
-            ORDER BY p.created_at DESC`
-        );
-        res.json(rows);
-    } catch (error) {
-        console.error('获取帖子错误:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 创建帖子（得积分）
-app.post('/api/forum/post', async (req, res) => {
-    const { userId, title, content } = req.body;
-
-    try {
-        const [result] = await db.promise().query(
-            'INSERT INTO forum_posts (user_id, title, content) VALUES (?, ?, ?)',
-            [userId, title, content]
-        );
-        
-        // 发帖得10积分
-        await db.promise().query(
-            'UPDATE users SET points = points + 10 WHERE id = ?',
-            [userId]
-        );
-        
-        res.json({ success: true, id: result.insertId });
-    } catch (error) {
-        console.error('创建帖子错误:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 获取帖子详情
-app.get('/api/forum/post/:id', async (req, res) => {
-    try {
-        const [post] = await db.promise().query(
-            `SELECT p.*, u.nickname as author_name
-            FROM forum_posts p
-            LEFT JOIN users u ON p.user_id = u.id
-            WHERE p.id = ?`,
-            [req.params.id]
-        );
-
-        const [comments] = await db.promise().query(
-            `SELECT c.*, u.nickname as user_name
-            FROM comments c
-            LEFT JOIN users u ON c.user_id = u.id
-            WHERE c.post_id = ?
-            ORDER BY c.created_at ASC`,
-            [req.params.id]
-        );
-
-        res.json({ ...post[0], comments });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 添加评论（得积分）
-app.post('/api/forum/post/:id/comment', async (req, res) => {
-    const { userId, content } = req.body;
-    const postId = req.params.id;
-
-    try {
-        await db.promise().query(
-            'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-            [postId, userId, content]
-        );
-        
-        // 评论得5积分
-        await db.promise().query(
-            'UPDATE users SET points = points + 5 WHERE id = ?',
-            [userId]
-        );
-        
-        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -305,6 +236,97 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
+// ==================== 论坛API ====================
+
+// 获取所有帖子
+app.get('/api/forum/posts', async (req, res) => {
+    try {
+        const [rows] = await db.promise().query(
+            `SELECT p.*, u.nickname as author_name,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as reply_count
+            FROM forum_posts p
+            LEFT JOIN users u ON p.user_id = u.id
+            ORDER BY p.created_at DESC`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('获取帖子错误:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 创建帖子
+app.post('/api/forum/post', async (req, res) => {
+    const { userId, title, content } = req.body;
+
+    try {
+        const [result] = await db.promise().query(
+            'INSERT INTO forum_posts (user_id, title, content) VALUES (?, ?, ?)',
+            [userId, title, content]
+        );
+        
+        // 发帖得10积分
+        await db.promise().query(
+            'UPDATE users SET points = points + 10 WHERE id = ?',
+            [userId]
+        );
+        
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('创建帖子错误:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 获取帖子详情
+app.get('/api/forum/post/:id', async (req, res) => {
+    try {
+        const [post] = await db.promise().query(
+            `SELECT p.*, u.nickname as author_name
+            FROM forum_posts p
+            LEFT JOIN users u ON p.user_id = u.id
+            WHERE p.id = ?`,
+            [req.params.id]
+        );
+
+        const [comments] = await db.promise().query(
+            `SELECT c.*, u.nickname as user_name
+            FROM comments c
+            LEFT JOIN users u ON c.user_id = u.id
+            WHERE c.post_id = ?
+            ORDER BY c.created_at ASC`,
+            [req.params.id]
+        );
+
+        res.json({ ...post[0], comments });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 添加评论
+app.post('/api/forum/post/:id/comment', async (req, res) => {
+    const { userId, content } = req.body;
+    const postId = req.params.id;
+
+    try {
+        await db.promise().query(
+            'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
+            [postId, userId, content]
+        );
+        
+        // 评论得5积分
+        await db.promise().query(
+            'UPDATE users SET points = points + 5 WHERE id = ?',
+            [userId]
+        );
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ==================== AI面试记录 ====================
 
 // 保存面试记录
@@ -341,7 +363,7 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'healthy', 
         timestamp: new Date().toISOString(),
-        database: db ? 'connected' : 'disconnected'
+        database: 'connected'
     });
 });
 
@@ -350,11 +372,11 @@ app.use((req, res) => {
     res.status(404).json({ error: '接口不存在' });
 });
 
-// ==================== 启动服务器（修改为适配Render）====================
-const PORT = process.env.PORT || 3000;
+// ==================== 启动服务器 ====================
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ 职引官后端服务运行在端口 ${PORT}`);
-    console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 本地访问: http://localhost:${PORT}`);
-    console.log(`🔗 远程访问: https://zhiyinguan.onrender.com`);
+    console.log(`🔑 环境：${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔑 本地访问：http://localhost:${PORT}`);
+    console.log(`🔑 远程访问：https://zhiyinguan.onrender.com`);
 });
