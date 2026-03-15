@@ -25,24 +25,27 @@
 
         /* 手机容器 */
         .phone {
-            max-width: 400px;
-            width: 100%;
-            background-color: white;
-            position: relative;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0 20px rgba(0,40,0,0.1);
-        }
+    max-width: 400px;
+    width: 100%;
+    background-color: white;
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 20px rgba(0,40,0,0.1);
+    height: 100vh; /* 添加这一行 - 固定高度 */
+    overflow: hidden; /* 添加这一行 - 隐藏溢出 */
+}
 
         /* 主内容区域 - 可滚动 */
-        .content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 16px 20px;
-            scrollbar-width: thin;
-            scrollbar-color: #2c6e2c #e0f0e0;
-        }
+       .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: #2c6e2c #e0f0e0;
+    -webkit-overflow-scrolling: touch; /* 添加这一行 - 平滑滚动 */
+}
 
         .content::-webkit-scrollbar {
             width: 4px;
@@ -54,15 +57,14 @@
 
         /* 底部导航栏 */
         .bottom-nav {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 8px 0 12px;
-            background-color: white;
-            border-top: 1px solid #e0f0e0;
-            box-shadow: 0 -2px 10px rgba(0,30,0,0.03);
-        }
-
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 0 12px;
+    background-color: white;
+    border-top: 1px solid #e0f0e0;
+    box-shadow: 0 -2px 10px rgba(0,30,0,0.03);
+}
         .nav-item {
             display: flex;
             flex-direction: column;
@@ -176,6 +178,9 @@
             justify-content: center;
             font-weight: 700;
             font-size: 20px;
+            object-fit: cover;
+            background-size: cover;
+            background-position: center;
         }
 
         /* 导师卡片横向滚动 */
@@ -197,6 +202,31 @@
         }
         .mentor-card:active {
             background-color: #e8f3e5;
+        }
+
+        /* 面试官卡片（新增） */
+        .interviewer-card {
+            min-width: 100px;
+            background: #f8fcf7;
+            border-radius: 24px;
+            padding: 12px 8px;
+            border: 1px solid #c8e0c8;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .interviewer-card.selected {
+            background: #d9f0d9;
+            border: 2px solid #2c6e2c;
+        }
+        .interviewer-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            margin: 0 auto 8px;
+            background-size: cover;
+            background-position: center;
+            background-color: #f0f7ee;
         }
 
         /* 论坛帖子项 */
@@ -322,6 +352,7 @@
 <body>
     <div class="phone" id="app"></div>
 
+    
     <script>
         // ==================== 全局配置 ====================
         const API_BASE = 'http://localhost:3000/api';
@@ -333,6 +364,54 @@
         let knowledgeData = [];
         let mentors = [];
         let interviewHistory = [];
+
+        // 面试官形象列表 - 使用本地照片（照片放在images文件夹中）
+        // 找到代码中约40行附近的 interviewers 数组，替换为：
+
+const interviewers = [
+    { 
+        id: 'leo', 
+        name: 'Leo Owen', 
+        style: '热情活跃型', 
+        photo: 'images/leo.png',
+        fallbackBg: '#ffb6b6',
+        fallbackIcon: '🔥'
+    },
+    { 
+        id: 'doria', 
+        name: 'Doria Flora', 
+        style: '温柔和蔼型', 
+        photo: 'images/doria.png',
+        fallbackBg: '#b6e2b6',
+        fallbackIcon: '🌸'
+    },
+    { 
+        id: 'kelly', 
+        name: 'Kelly Amy', 
+        style: '笑里藏刀型', 
+        photo: 'images/kelly.png',
+        fallbackBg: '#f5deb3',
+        fallbackIcon: '😼'
+    },
+    { 
+        id: 'jackson', 
+        name: 'Jackson', 
+        style: '压力挑战型', 
+        photo: 'images/jackson.png',
+        fallbackBg: '#b0c4de',
+        fallbackIcon: '⚡'
+    },
+    { 
+        id: 'jessica', 
+        name: 'Jessica Vivian', 
+        style: '严肃专业型', 
+        photo: 'images/jessica.png',
+        fallbackBg: '#dbb6d9',
+        fallbackIcon: '📋'
+    }
+];
+       
+        let selectedInterviewer = interviewers[0]; // 默认第一个
 
         // DOM 元素
         const app = document.getElementById('app');
@@ -388,7 +467,8 @@
                 ];
             }
         }
-                // ==================== 登录界面 ====================
+
+        // ==================== 登录界面 ====================
         function renderLogin() {
             app.innerHTML = `
                 <div class="content" style="display: flex; flex-direction: column; justify-content: center; min-height: 100vh;">
@@ -514,47 +594,54 @@
         }
 
         // ==================== 渲染主应用 ====================
-        function renderMainApp() {
-            app.innerHTML = `
-                <!-- 主内容区域 -->
-                <div class="content" id="main-content"></div>
+       // ==================== 渲染主应用 ====================
+function renderMainApp() {
+    app.innerHTML = `
+        <!-- 主内容区域 - 可滚动 -->
+        <div class="content" id="main-content"></div>
 
-                <!-- 底部导航栏 -->
-                <div class="bottom-nav" id="bottom-nav">
-                    <div class="nav-item active" data-tab="home">
-                        <i class="fas fa-home"></i>
-                        <span>首页</span>
-                    </div>
-                    <div class="nav-item" data-tab="knowledge">
-                        <i class="fas fa-database"></i>
-                        <span>知识库</span>
-                    </div>
-                    <div class="nav-item" data-tab="interview">
-                        <i class="fas fa-microphone"></i>
-                        <span>AI面试</span>
-                    </div>
-                    <div class="nav-item" data-tab="consult">
-                        <i class="fas fa-comments"></i>
-                        <span>咨询</span>
-                    </div>
-                    <div class="nav-item" data-tab="profile">
-                        <i class="fas fa-user"></i>
-                        <span>我的</span>
-                    </div>
-                </div>
-            `;
+        <!-- 底部导航栏 - 固定 -->
+        <div class="bottom-nav" id="bottom-nav">
+            <div class="nav-item active" data-tab="home">
+                <i class="fas fa-home"></i>
+                <span>首页</span>
+            </div>
+            <div class="nav-item" data-tab="knowledge">
+                <i class="fas fa-database"></i>
+                <span>知识库</span>
+            </div>
+            <div class="nav-item" data-tab="interview">
+                <i class="fas fa-microphone"></i>
+                <span>AI面试</span>
+            </div>
+            <div class="nav-item" data-tab="consult">
+                <i class="fas fa-comments"></i>
+                <span>咨询</span>
+            </div>
+            <div class="nav-item" data-tab="profile">
+                <i class="fas fa-user"></i>
+                <span>我的</span>
+            </div>
+        </div>
+    `;
 
-            // 绑定导航事件
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                    this.classList.add('active');
-                    currentTab = this.getAttribute('data-tab');
-                    loadTabContent(currentTab);
-                });
-            });
-        }
-
+    // 绑定导航事件
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.getAttribute('data-tab');
+            loadTabContent(currentTab);
+            
+            // 添加这一部分 - 点击导航时滚动到顶部
+            const contentDiv = document.getElementById('main-content');
+            if (contentDiv) {
+                contentDiv.scrollTop = 0;
+            }
+        });
+    });
+}
+           
         // ==================== 加载Tab内容 ====================
         async function loadTabContent(tab) {
             const contentDiv = document.getElementById('main-content');
@@ -576,6 +663,24 @@
                 case 'profile':
                     renderProfile(contentDiv);
                     break;
+                    case 'home':
+    renderHome(contentDiv);
+    break;
+case 'knowledge':
+    await renderKnowledge(contentDiv);
+    break;
+case 'interview':
+    renderInterview(contentDiv);
+    break;
+case 'consult':
+    renderConsult(contentDiv);
+    break;
+case 'forum':  // 添加这一行
+    renderForum(contentDiv);  // 添加这一行
+    break;  // 添加这一行
+case 'profile':
+    renderProfile(contentDiv);
+    break;
             }
         }
 
@@ -601,7 +706,8 @@
                 console.error('获取积分失败:', error);
             }
         }
-                // ==================== 首页 ====================
+
+        // ==================== 首页 ====================
         function renderHome(container) {
             // 确保有数据
             const hotKnowledge = knowledgeData.slice(0, 4);
@@ -622,6 +728,120 @@
                             <div class="avatar">${(currentUser?.nickname || currentUser?.username || 'U').charAt(0)}</div>
                         </div>
                     </div>
+                    <!-- 可滑动的项目介绍照片框 -->
+<div style="margin: 20px 0 24px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <i class="fas fa-star" style="color: #2c6e2c; font-size: 18px;"></i>
+        <span style="font-weight: 600; color: #1a3a1a;">✨ 职引官 · 功能介绍</span>
+    </div>
+    
+    <div style="display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 12px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
+        <!-- 卡片1: AI面试 -->
+        <div style="min-width: 260px; background: linear-gradient(145deg, #f0f7ee, #ffffff); border-radius: 24px; padding: 16px; border: 1px solid #d0e8d0; box-shadow: 0 4px 12px rgba(44,110,44,0.1);">
+            <div style="display: flex; gap: 12px;">
+                <div style="background: #2c6e2c; width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px;">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 16px; color: #1a3a1a;">AI模拟面试</div>
+                    <div style="color: #4f6b4f; font-size: 12px; margin: 4px 0;">5种面试官风格</div>
+                    <span style="background: #e8f3e5; color: #2c6e2c; padding: 2px 8px; border-radius: 30px; font-size: 10px;">🔥 热门</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; color: #4f6b4f; font-size: 13px; line-height: 1.4;">
+                真实模拟面试环境，智能评分，逐题分析，快速提升面试能力
+            </div>
+        </div>
+        
+        <!-- 卡片2: 知识库 -->
+        <div style="min-width: 260px; background: linear-gradient(145deg, #f0f7ee, #ffffff); border-radius: 24px; padding: 16px; border: 1px solid #d0e8d0; box-shadow: 0 4px 12px rgba(44,110,44,0.1);">
+            <div style="display: flex; gap: 12px;">
+                <div style="background: #2c6e2c; width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px;">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 16px; color: #1a3a1a;">岗位知识库</div>
+                    <div style="color: #4f6b4f; font-size: 12px; margin: 4px 0;">1000+面经真题</div>
+                    <span style="background: #e8f3e5; color: #2c6e2c; padding: 2px 8px; border-radius: 30px; font-size: 10px;">📚 面经</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; color: #4f6b4f; font-size: 13px; line-height: 1.4;">
+                互联网、公务员、考研复试，海量真实面经，一键搜索查看
+            </div>
+        </div>
+        
+        <!-- 卡片3: 在职咨询 -->
+        <div style="min-width: 260px; background: linear-gradient(145deg, #f0f7ee, #ffffff); border-radius: 24px; padding: 16px; border: 1px solid #d0e8d0; box-shadow: 0 4px 12px rgba(44,110,44,0.1);">
+            <div style="display: flex; gap: 12px;">
+                <div style="background: #2c6e2c; width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px;">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 16px; color: #1a3a1a;">在职导师直连</div>
+                    <div style="color: #4f6b4f; font-size: 12px; margin: 4px 0;">大厂导师1v1</div>
+                    <span style="background: #e8f3e5; color: #2c6e2c; padding: 2px 8px; border-radius: 30px; font-size: 10px;">⭐ 4.9+</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; color: #4f6b4f; font-size: 13px; line-height: 1.4;">
+                腾讯、阿里在职导师，简历优化、模拟面试、职业规划
+            </div>
+        </div>
+        
+        <!-- 卡片4: 论坛社区 -->
+        <div style="min-width: 260px; background: linear-gradient(145deg, #f0f7ee, #ffffff); border-radius: 24px; padding: 16px; border: 1px solid #d0e8d0; box-shadow: 0 4px 12px rgba(44,110,44,0.1);">
+            <div style="display: flex; gap: 12px;">
+                <div style="background: #2c6e2c; width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px;">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 16px; color: #1a3a1a;">求职论坛</div>
+                    <div style="color: #4f6b4f; font-size: 12px; margin: 4px 0;">交流分享互助</div>
+                    <span style="background: #e8f3e5; color: #2c6e2c; padding: 2px 8px; border-radius: 30px; font-size: 10px;">💬 热帖</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; color: #4f6b4f; font-size: 13px; line-height: 1.4;">
+                发帖得积分，与求职者交流经验，获取最新招聘信息
+            </div>
+        </div>
+        
+        <!-- 卡片5: 积分系统 -->
+        <div style="min-width: 260px; background: linear-gradient(145deg, #f0f7ee, #ffffff); border-radius: 24px; padding: 16px; border: 1px solid #d0e8d0; box-shadow: 0 4px 12px rgba(44,110,44,0.1);">
+            <div style="display: flex; gap: 12px;">
+                <div style="background: #2c6e2c; width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px;">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 16px; color: #1a3a1a;">积分商城</div>
+                    <div style="color: #4f6b4f; font-size: 12px; margin: 4px 0;">做任务赚积分</div>
+                    <span style="background: #e8f3e5; color: #2c6e2c; padding: 2px 8px; border-radius: 30px; font-size: 10px;">🎁 兑换</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; color: #4f6b4f; font-size: 13px; line-height: 1.4;">
+                签到、发帖、面试赚积分，可兑换导师咨询等服务
+            </div>
+        </div>
+    </div>
+    
+    <!-- 滑动提示 -->
+    <div style="display: flex; justify-content: center; gap: 4px; margin-top: 8px;">
+        <span style="width: 20px; height: 4px; background: #2c6e2c; border-radius: 2px;"></span>
+        <span style="width: 6px; height: 4px; background: #d0e0d0; border-radius: 2px;"></span>
+        <span style="width: 6px; height: 4px; background: #d0e0d0; border-radius: 2px;"></span>
+        <span style="width: 6px; height: 4px; background: #d0e0d0; border-radius: 2px;"></span>
+        <span style="width: 6px; height: 4px; background: #d0e0d0; border-radius: 2px;"></span>
+    </div>
+</div>
+<!-- 项目口号 -->
+<div style="background: linear-gradient(135deg, #2c6e2c, #1a3a1a); border-radius: 30px; padding: 16px 20px; margin: 24px 0; color: white; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <div style="font-size: 18px; font-weight: 700;">职引官 · 你的AI面试教练</div>
+        <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">1000+面经 · 5种面试官 · 大厂导师直连</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.2); border-radius: 30px; padding: 8px 12px; font-size: 12px;">
+        <i class="fas fa-rocket"></i> 立即体验
+    </div>
+</div>
+                    
 
                     <!-- 快捷入口 -->
                     <div class="section-title">
@@ -772,7 +992,6 @@
 
         // ==================== 筛选知识库 ====================
         function filterKnowledge(type) {
-            // 这个函数会在后续完善
             console.log('筛选:', type);
         }
 
@@ -843,11 +1062,10 @@
 
         // ==================== 分享知识库 ====================
         function shareKnowledge(id) {
-            // 复制链接或分享
             alert('分享功能开发中，将获得5积分奖励');
-            // 这里可以添加积分奖励逻辑
         }
-                // ==================== 全局面试状态 ====================
+
+        // ==================== 全局面试状态 ====================
         let currentInterview = {
             type: '',
             position: '',
@@ -858,7 +1076,154 @@
             knowledgeId: null
         };
 
-        // ==================== AI面试板块 ====================
+        // ==================== 新增: 面试官选择行（使用本地照片）====================
+        function renderInterviewerStrip() {
+            return `
+                <div style="margin: 16px 0 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                        <i class="fas fa-user-tie" style="color: #2c6e2c;"></i>
+                        <span style="font-weight: 600;">选择你的面试官风格</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;" id="interviewer-strip">
+                        ${interviewers.map(iv => `
+                            <div class="interviewer-card ${selectedInterviewer.id === iv.id ? 'selected' : ''}" 
+                                 onclick="selectInterviewer('${iv.id}')"
+                                 data-id="${iv.id}">
+                                <div class="interviewer-avatar" style="background-image: url('${iv.photo}'); background-size: cover; background-position: center;" 
+                                     onerror="this.style.backgroundImage='none'; this.style.backgroundColor='${iv.fallbackBg}'; this.innerHTML='${iv.fallbackIcon}'; this.style.fontSize='28px'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center';">
+                                </div>
+                                <div style="font-weight: 600; font-size: 14px;">${iv.name.split(' ')[0]}</div>
+                                <div style="font-size: 10px; color: #4f6b4f;">${iv.style}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 选择面试官（全局函数）
+        window.selectInterviewer = function(id) {
+            selectedInterviewer = interviewers.find(iv => iv.id === id) || interviewers[0];
+            // 重新渲染AI面试板块以更新选中样式
+            if (currentTab === 'interview') {
+                loadTabContent('interview');
+            }
+        };
+
+        // ==================== 视频面试入口 ====================
+       // ==================== 视频面试入口 ====================
+function startVideoInterview() {
+    const contentDiv = document.getElementById('main-content');
+    contentDiv.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+            <div class="back-btn" onclick="loadTabContent('interview')">
+                <i class="fas fa-arrow-left"></i> 返回AI面试
+            </div>
+            <div class="card" style="text-align: center;">
+                <div style="font-size: 24px; font-weight: 700; margin-bottom: 16px;">📹 视频面试模拟</div>
+                
+                <!-- 添加视频面试示意图 -->
+                <div style="margin-bottom: 20px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <img src="example.jpg" alt="视频面试示意图" style="width: 100%; height: auto; display: block;">
+                </div>
+                
+                <div class="interviewer-avatar" style="margin: 0 auto 16px; width: 100px; height: 100px; background-image: url('${selectedInterviewer.photo}'); background-size: cover; background-position: center;" 
+                     onerror="this.style.backgroundImage='none'; this.style.backgroundColor='${selectedInterviewer.fallbackBg}'; this.innerHTML='${selectedInterviewer.fallbackIcon}'; this.style.fontSize='48px'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center';">
+                </div>
+                <h3>${selectedInterviewer.name}</h3>
+                <p style="color: #4f6b4f; margin: 8px 0;">${selectedInterviewer.style}</p>
+                <div style="background: #f0f7ee; padding: 20px; border-radius: 16px; margin: 20px 0;">
+                    <i class="fas fa-video" style="font-size: 48px; color: #2c6e2c;"></i>
+                    <p style="margin-top: 12px;">视频连接中，面试官“${selectedInterviewer.name}”已就位</p>
+                    <p style="font-size: 14px;">( 真实模拟视频面试环境，请准备好你的摄像头和麦克风 )</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-primary" style="flex:2;" onclick="startVideoInterviewSession()">开始视频面试</button>
+                    <button class="btn-outline" style="flex:1;" onclick="loadTabContent('interview')">取消</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+// ==================== 开始视频面试会话 ====================
+function startVideoInterviewSession() {
+    const contentDiv = document.getElementById('main-content');
+    contentDiv.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+            <div class="back-btn" onclick="startVideoInterview()">
+                <i class="fas fa-arrow-left"></i> 返回视频面试准备
+            </div>
+            
+            <div class="card" style="text-align: center;">
+                <div style="font-size: 20px; font-weight: 700; margin-bottom: 20px;">🎥 视频面试进行中</div>
+                
+                <!-- 视频面试主画面 -->
+                <div style="position: relative; margin-bottom: 20px;">
+                    <!-- 主画面 - 面试官 -->
+                    <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <img src="example.jpg" alt="视频面试画面" style="width: 100%; height: auto; display: block;">
+                    </div>
+                    
+                    <!-- 小窗 - 自己 -->
+                    <div style="position: absolute; bottom: 16px; right: 16px; width: 100px; height: 150px; border-radius: 12px; overflow: hidden; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        <div style="background: #2c6e2c; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 面试官信息 -->
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 12px; background: #f0f7ee; border-radius: 16px;">
+                    <div class="interviewer-avatar" style="width: 50px; height: 50px; background-image: url('${selectedInterviewer.photo}'); background-size: cover; background-position: center;" 
+                         onerror="this.style.backgroundImage='none'; this.style.backgroundColor='${selectedInterviewer.fallbackBg}'; this.innerHTML='${selectedInterviewer.fallbackIcon}'; this.style.fontSize='24px'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center';">
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700;">${selectedInterviewer.name}</div>
+                        <div style="color: #4f6b4f; font-size: 12px;">${selectedInterviewer.style} · 正在面试中</div>
+                    </div>
+                </div>
+                
+                <!-- 当前问题 -->
+                <div style="background: #f8fcf7; padding: 20px; border-radius: 16px; margin: 20px 0; text-align: left;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #2c6e2c;">当前问题：</div>
+                    <div style="font-size: 16px;">请做一个简单的自我介绍，并说明你为什么适合这个岗位？</div>
+                </div>
+                
+                <!-- 控制按钮 -->
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button class="btn-outline" style="flex: 1; padding: 12px;" onclick="alert('麦克风已静音')">
+                        <i class="fas fa-microphone-slash"></i> 静音
+                    </button>
+                    <button class="btn-outline" style="flex: 1; padding: 12px;" onclick="alert('摄像头已关闭')">
+                        <i class="fas fa-video-slash"></i> 关闭摄像头
+                    </button>
+                </div>
+                
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-primary" style="flex: 1;" onclick="alert('回答已提交')">
+                        <i class="fas fa-check"></i> 回答完成
+                    </button>
+                    <button class="btn-outline" style="flex: 1; color: #c00; border-color: #c00;" onclick="confirmEndVideoInterview()">
+                        <i class="fas fa-phone-slash"></i> 结束面试
+                    </button>
+                </div>
+                
+                <!-- 时间提示 -->
+                <div style="margin-top: 16px; color: #8aa08a; font-size: 12px;">
+                    <i class="fas fa-clock"></i> 面试时间: 02:30 / 预计 15:00
+                </div>
+            </div>
+        </div>
+    `;
+}
+// ==================== 确认结束视频面试 ====================
+function confirmEndVideoInterview() {
+    if (confirm('确定要结束视频面试吗？')) {
+        alert('面试已结束，正在生成面试报告...');
+        loadTabContent('interview');
+    }
+}
+        // ==================== AI面试板块（修改后，包含面试官形象和视频面试入口）====================
         function renderInterview(container) {
             container.innerHTML = `
                 <div style="padding: 8px 0 20px;">
@@ -866,8 +1231,25 @@
                         <i class="fas fa-robot"></i> AI面试官
                     </div>
                     
+                    <!-- 面试官形象卡片 (新增，使用本地照片) -->
+                    ${renderInterviewerStrip()}
+
+                    <!-- 视频面试快捷入口 (新增) -->
+                    <div class="card" style="background: linear-gradient(145deg, #e8f5e8, #ffffff); margin-bottom: 16px; cursor: pointer;" onclick="startVideoInterview()">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="background: #2c6e2c; width: 50px; height: 50px; border-radius: 30px; display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="fas fa-video" style="font-size: 26px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; font-size: 16px;">视频面试 · 真人模拟</div>
+                                <div style="color: #4f6b4f; font-size: 14px;">当前面试官: ${selectedInterviewer.name} (${selectedInterviewer.style})</div>
+                            </div>
+                            <i class="fas fa-chevron-right" style="margin-left: auto; color: #2c6e2c;"></i>
+                        </div>
+                    </div>
+
                     <!-- 欢迎卡片 -->
-                    <div class="card" style="background: linear-gradient(145deg, #f0f7ee, #ffffff);">
+                    <div class="card">
                         <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px;">
                             <div class="avatar" style="width: 60px; height: 60px; font-size: 30px;">
                                 <i class="fas fa-user-tie"></i>
@@ -902,7 +1284,7 @@
                         ${renderInterviewHistory()}
                     </div>
 
-                    <!-- 推荐练习 -->
+                    <!-- 热门练习 -->
                     <div class="section-title">
                         <i class="fas fa-fire"></i> 热门练习
                     </div>
@@ -951,13 +1333,11 @@
 
         // ==================== 按类型开始面试 ====================
         function startInterviewByType(type) {
-            // 根据类型从知识库筛选相关问题
             const relatedQuestions = knowledgeData.filter(k => 
                 k.position?.includes(type) || k.company?.includes(type)
             ).slice(0, 5);
             
             if (relatedQuestions.length === 0) {
-                // 如果没有找到，使用默认问题
                 startInterview(type, getDefaultQuestions(type));
             } else {
                 const questions = relatedQuestions.map(k => k.interview_questions).join('\n\n').split('\n').filter(q => q.trim());
@@ -1008,11 +1388,9 @@
                 return;
             }
 
-            // 模拟AI生成问题（实际应用中可调用AI API）
             let questions = [];
             
             if (jd) {
-                // 从JD中提取关键词生成问题
                 const keywords = jd.match(/[a-zA-Z\u4e00-\u9fa5]{2,}/g) || [];
                 const uniqueKeywords = [...new Set(keywords)].slice(0, 5);
                 questions = uniqueKeywords.map(k => `请谈谈你对${k}的理解和经验？`);
@@ -1041,7 +1419,6 @@
 
         // ==================== 开始面试 ====================
         function startInterview(type, questions, knowledgeId = null) {
-            // 初始化面试状态
             currentInterview = {
                 type: type,
                 position: type,
@@ -1055,7 +1432,7 @@
             showInterviewQuestion();
         }
 
-        // ==================== 显示面试问题 ====================
+        // ==================== 显示面试问题（使用当前选中的面试官照片）====================
         function showInterviewQuestion() {
             const contentDiv = document.getElementById('main-content');
             const q = currentInterview.questions[currentInterview.currentIndex];
@@ -1079,10 +1456,11 @@
                             </div>
                         </div>
 
-                        <!-- AI面试官头像 -->
-                        <div class="avatar" style="margin: 0 auto 20px; width: 80px; height: 80px; font-size: 40px; background: #2c6e2c;">
-                            <i class="fas fa-robot"></i>
+                        <!-- AI面试官头像（使用当前选中的面试官照片） -->
+                        <div class="interviewer-avatar" style="margin: 0 auto 20px; width: 80px; height: 80px; background-image: url('${selectedInterviewer.photo}'); background-size: cover; background-position: center;" 
+                             onerror="this.style.backgroundImage='none'; this.style.backgroundColor='${selectedInterviewer.fallbackBg}'; this.innerHTML='${selectedInterviewer.fallbackIcon}'; this.style.fontSize='40px'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center';">
                         </div>
+                        <div style="margin-bottom: 10px; font-weight: 600; color: #2c6e2c;">${selectedInterviewer.name} · ${selectedInterviewer.style}</div>
 
                         <!-- 问题 -->
                         <div class="card" style="background: #f8fcf7; margin-bottom: 20px; text-align: left;">
@@ -1113,7 +1491,6 @@
                 </div>
             `;
 
-            // 自动保存回答
             document.getElementById('interview-answer')?.addEventListener('input', function(e) {
                 currentInterview.answers[currentInterview.currentIndex] = e.target.value;
             });
@@ -1122,12 +1499,10 @@
         // ==================== 上一题 ====================
         function previousQuestion() {
             if (currentInterview.currentIndex > 0) {
-                // 保存当前回答
                 const answer = document.getElementById('interview-answer')?.value;
                 if (answer !== undefined) {
                     currentInterview.answers[currentInterview.currentIndex] = answer;
                 }
-                
                 currentInterview.currentIndex--;
                 showInterviewQuestion();
             }
@@ -1135,14 +1510,12 @@
 
         // ==================== 下一题 ====================
         function nextQuestion() {
-            // 保存当前回答
             const answer = document.getElementById('interview-answer')?.value;
             if (answer !== undefined) {
                 currentInterview.answers[currentInterview.currentIndex] = answer;
             }
 
             if (currentInterview.currentIndex === currentInterview.questions.length - 1) {
-                // 完成面试
                 finishInterview();
             } else {
                 currentInterview.currentIndex++;
@@ -1152,10 +1525,8 @@
 
         // ==================== 完成面试 ====================
         async function finishInterview() {
-            // 计算得分（简单模拟）
             const score = calculateInterviewScore();
             
-            // 保存到历史
             const interviewRecord = {
                 userId: currentUser.id,
                 type: currentInterview.type,
@@ -1171,11 +1542,9 @@
                     body: JSON.stringify(interviewRecord)
                 });
 
-                // 重新加载历史
                 const historyRes = await fetch(`${API_BASE}/interview/history/${currentUser.id}`);
                 interviewHistory = await historyRes.json();
 
-                // 显示报告
                 showInterviewReport(null, {
                     type: currentInterview.type,
                     questions: currentInterview.questions,
@@ -1186,7 +1555,6 @@
 
             } catch (error) {
                 console.error('保存面试记录失败:', error);
-                // 即使保存失败，也显示报告
                 showInterviewReport(null, {
                     type: currentInterview.type,
                     questions: currentInterview.questions,
@@ -1198,33 +1566,187 @@
         }
 
         // ==================== 计算得分 ====================
-        function calculateInterviewScore() {
-            const answers = currentInterview.answers;
-            if (!answers || answers.length === 0) return 0;
-            
-            // 简单评分：根据回答长度和关键词
-            let totalScore = 0;
-            answers.forEach((ans, i) => {
-                if (!ans) return;
-                
-                let qScore = 60; // 基础分
-                
-                // 长度评分
-                if (ans.length > 100) qScore += 20;
-                else if (ans.length > 50) qScore += 10;
-                
-                // 关键词评分（简单模拟）
-                const keywords = ['项目', '经验', '学习', '团队', '解决', '方法', '结果'];
-                keywords.forEach(kw => {
-                    if (ans.includes(kw)) qScore += 5;
-                });
-                
-                totalScore += Math.min(qScore, 100);
+        // ==================== 计算得分（优化版）====================
+function calculateInterviewScore() {
+    const answers = currentInterview.answers;
+    if (!answers || answers.length === 0) return 0;
+    
+    let totalScore = 0;
+    let answeredCount = 0;
+    
+    answers.forEach((ans) => {
+        if (!ans || ans.trim() === '') return; // 没回答不计分
+        
+        answeredCount++;
+        let qScore = 0;
+        const answer = ans.toLowerCase();
+        
+        // 1. 基础分 - 有回答就给30分
+        qScore += 30;
+        
+        // 2. 长度评分（表明回答详细程度）
+        if (answer.length > 200) qScore += 25;
+        else if (answer.length > 100) qScore += 20;
+        else if (answer.length > 50) qScore += 15;
+        else if (answer.length > 20) qScore += 10;
+        
+        // 3. 结构评分（使用STAR法则或分点）
+        const structureIndicators = ['首先', '然后', '最后', '第一', '第二', '第三', '1.', '2.', '3.', '步骤', '方面'];
+        let hasStructure = false;
+        structureIndicators.forEach(word => {
+            if (answer.includes(word)) hasStructure = true;
+        });
+        if (hasStructure) qScore += 10;
+        
+        // 4. 关键词评分（根据问题类型动态调整）
+        const currentQuestion = currentInterview.questions[currentInterview.answers.indexOf(ans)] || '';
+        
+        // 根据不同问题类型赋予不同权重
+        if (currentQuestion.includes('介绍') || currentQuestion.includes('自我介绍')) {
+            const introKeywords = ['经验', '背景', '学历', '专业', '工作', '项目', '技能', '擅长'];
+            introKeywords.forEach(kw => {
+                if (answer.includes(kw)) qScore += 3;
             });
-            
-            return Math.round(totalScore / answers.length);
+        } 
+        else if (currentQuestion.includes('为什么') || currentQuestion.includes('原因')) {
+            const reasonKeywords = ['因为', '所以', '因此', '导致', '影响', '因素', '考虑'];
+            reasonKeywords.forEach(kw => {
+                if (answer.includes(kw)) qScore += 4;
+            });
         }
+        else if (currentQuestion.includes('如何') || currentQuestion.includes('怎么')) {
+            const methodKeywords = ['方法', '步骤', '首先', '然后', '最后', '通过', '采用'];
+            methodKeywords.forEach(kw => {
+                if (answer.includes(kw)) qScore += 4;
+            });
+        }
+        else if (currentQuestion.includes('案例') || currentQuestion.includes('经历') || currentQuestion.includes('项目')) {
+            const caseKeywords = ['项目', '负责', '完成', '实现', '结果', '效果', '提升', '降低', '增加'];
+            caseKeywords.forEach(kw => {
+                if (answer.includes(kw)) qScore += 4;
+            });
+        }
+        
+        // 5. 通用关键词评分
+        const commonKeywords = ['项目', '经验', '学习', '团队', '解决', '方法', '结果', '目标', '计划', '实现'];
+        commonKeywords.forEach(kw => {
+            if (answer.includes(kw)) qScore += 2;
+        });
+        
+        // 6. 具体性评分（包含数字、百分比、具体名词）
+        const hasNumbers = /\d+/.test(answer);
+        const hasPercentage = /%|百分之|百分点/.test(answer);
+        const hasSpecific = /公司|部门|职位|岗位|工具|技术|软件/.test(answer);
+        
+        if (hasNumbers) qScore += 5;
+        if (hasPercentage) qScore += 8;
+        if (hasSpecific) qScore += 5;
+        
+        // 限制每题最高100分
+        qScore = Math.min(qScore, 100);
+        totalScore += qScore;
+    });
+    
+    // 如果一题都没回答，返回0分
+    if (answeredCount === 0) return 0;
+    
+    // 计算平均分
+    return Math.round(totalScore / answeredCount);
+}
 
+// ==================== 获取优化建议（增强版）====================
+function getOptimizeSuggestion(question, answer) {
+    if (!answer || answer.trim() === '') {
+        return '❌ 未作答。面试中一定要开口回答，哪怕简单说几句也比沉默好。';
+    }
+    
+    const suggestions = [];
+    const answerLower = answer.toLowerCase();
+    
+    // 长度建议
+    if (answer.length < 30) {
+        suggestions.push('📏 回答太简短，建议展开说明，增加细节和例子。');
+    } else if (answer.length < 80) {
+        suggestions.push('📏 回答可以更详细一些，尝试用2-3个点展开说明。');
+    }
+    
+    // 结构建议
+    const hasStructure = /首先|然后|最后|第一|第二|第三|1\.|2\.|3\.|步骤|方面/.test(answerLower);
+    if (!hasStructure) {
+        suggestions.push('📊 建议用"首先/其次/最后"或"第一/第二/第三"来组织语言，让回答更有条理。');
+    }
+    
+    // 具体性建议
+    const hasNumbers = /\d+/.test(answer);
+    if (!hasNumbers) {
+        suggestions.push('🔢 加入具体数字会让回答更有说服力（如：团队规模、项目时长、提升百分比等）。');
+    }
+    
+    const hasExample = /例如|比如|案例|项目|经历/.test(answerLower);
+    if (!hasExample && !question.includes('自我介绍')) {
+        suggestions.push('💡 结合具体案例或项目经历，避免空泛的理论。');
+    }
+    
+    // 问题特定建议
+    if (question.includes('自我介绍')) {
+        if (!answerLower.includes('经验') && !answerLower.includes('背景')) {
+            suggestions.push('🎯 自我介绍应包含：教育背景、工作经历、核心技能、职业目标。');
+        }
+    } else if (question.includes('优缺点')) {
+        if (!answerLower.includes('缺点') && !answerLower.includes('不足')) {
+            suggestions.push('⚠️ 谈缺点时可以说一个真实的缺点，然后说明如何改进。');
+        }
+    } else if (question.includes('为什么')) {
+        if (!answerLower.includes('因为') && !answerLower.includes('所以')) {
+            suggestions.push('🤔 回答"为什么"类问题，要给出具体原因和动机。');
+        }
+    } else if (question.includes('如何') || question.includes('怎么')) {
+        if (!answerLower.includes('步骤') && !answerLower.includes('方法')) {
+            suggestions.push('📝 "如何"类问题要讲清楚方法和步骤。');
+        }
+    }
+    
+    // 关键词丰富度
+    const keywords = ['项目', '经验', '学习', '团队', '解决', '方法', '结果'];
+    let keywordCount = 0;
+    keywords.forEach(kw => {
+        if (answerLower.includes(kw)) keywordCount++;
+    });
+    if (keywordCount < 2) {
+        suggestions.push('🔑 尝试使用更多关键词（项目、经验、团队、解决、结果等）。');
+    }
+    
+    // 如果是优秀回答
+    if (answer.length > 150 && hasStructure && keywordCount >= 3) {
+        return '✨ 非常优秀的回答！结构清晰，内容详实，继续保持！';
+    }
+    
+    // 如果回答很好但还有提升空间
+    if (answer.length > 100 && hasStructure) {
+        suggestions.push('👍 整体不错，可以再增加一些具体案例和数据支撑。');
+    }
+    
+    return suggestions.length > 0 
+        ? suggestions.map(s => '• ' + s).join('<br>')
+        : '✅ 回答基本合格，按照建议优化会更好！';
+}
+
+// ==================== 能力分析文本（增强版）====================
+function renderAbilityAnalysis(score) {
+    if (score >= 90) {
+        return `<p style="color: #2c6e2c;">🏆 卓越！得分: ${score}分。你的回答结构清晰、内容详实、案例具体，面试官印象极佳！</p>`;
+    } else if (score >= 80) {
+        return `<p style="color: #2c6e2c;">🎉 优秀！得分: ${score}分。回答很有条理，稍加优化即可达到卓越水平。</p>`;
+    } else if (score >= 70) {
+        return `<p style="color: #f5b342;">👍 良好！得分: ${score}分。基础不错，建议增加具体案例和数字支撑。</p>`;
+    } else if (score >= 60) {
+        return `<p style="color: #f5b342;">📝 及格！得分: ${score}分。回答完整但缺乏亮点，尝试用STAR法则优化。</p>`;
+    } else if (score >= 40) {
+        return `<p style="color: #c00;">💪 需要加强！得分: ${score}分。回答过于简略，建议多练习常见问题。</p>`;
+    } else {
+        return `<p style="color: #c00;">❌ 待提高！得分: ${score}分。部分题目未作答，面试中一定要积极回应。</p>`;
+    }
+}
         // ==================== 确认结束面试 ====================
         function confirmEndInterview() {
             if (confirm('确定要结束面试吗？当前进度将不会保存')) {
@@ -1301,7 +1823,6 @@
                 </div>
             `;
 
-            // 渲染雷达图
             setTimeout(() => {
                 const ctx = document.getElementById('abilityRadar')?.getContext('2d');
                 if (ctx) {
@@ -1332,7 +1853,6 @@
 
         // ==================== 生成能力分数 ====================
         function generateAbilityScores(baseScore) {
-            // 根据基础分生成各项能力分数
             const variance = 15;
             return [
                 Math.min(100, baseScore + (Math.random() * variance - variance/2)),
@@ -1403,7 +1923,8 @@
                 </div>
             `;
         }
-                // ==================== 咨询板块 ====================
+
+        // ==================== 咨询板块 ====================
         function renderConsult(container) {
             container.innerHTML = `
                 <div style="padding: 8px 0 20px;">
@@ -1411,7 +1932,6 @@
                         <i class="fas fa-handshake"></i> 在职人员直连
                     </div>
 
-                    <!-- 筛选栏 -->
                     <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px;">
                         <span class="company-tag" onclick="filterMentors('all')">全部</span>
                         <span class="company-tag" onclick="filterMentors('互联网')">互联网</span>
@@ -1422,20 +1942,17 @@
                         <span class="company-tag" onclick="filterMentors('产品')">产品</span>
                     </div>
 
-                    <!-- 搜索框 -->
                     <div style="background: #f0f7ee; border-radius: 40px; padding: 12px 18px; margin-bottom: 20px; display: flex; gap: 10px;">
                         <i class="fas fa-search" style="color: #2c6e2c;"></i>
                         <input type="text" id="search-mentor" placeholder="搜索导师姓名、公司、职位..." style="border: none; background: transparent; width: 100%; outline: none;">
                     </div>
 
-                    <!-- 导师列表 -->
                     <div id="mentor-list">
                         ${mentors.map(mentor => renderMentorCard(mentor)).join('')}
                     </div>
                 </div>
             `;
 
-            // 搜索功能
             document.getElementById('search-mentor')?.addEventListener('input', function(e) {
                 const keyword = e.target.value.toLowerCase();
                 const filtered = mentors.filter(m => 
@@ -1443,7 +1960,6 @@
                     (m.company && m.company.toLowerCase().includes(keyword)) ||
                     (m.position && m.position.toLowerCase().includes(keyword))
                 );
-                
                 document.getElementById('mentor-list').innerHTML = filtered.map(m => renderMentorCard(m)).join('');
             });
         }
@@ -1484,14 +2000,10 @@
                 document.getElementById('mentor-list').innerHTML = mentors.map(m => renderMentorCard(m)).join('');
                 return;
             }
-
             const filtered = mentors.filter(m => 
                 m.company?.includes(type) || m.position?.includes(type)
             );
-            
             document.getElementById('mentor-list').innerHTML = filtered.map(m => renderMentorCard(m)).join('');
-            
-            // 高亮选中的筛选标签
             document.querySelectorAll('.company-tag').forEach(tag => {
                 tag.style.background = tag.innerText === type ? '#2c6e2c' : '#e8f3e5';
                 tag.style.color = tag.innerText === type ? 'white' : '#2c6e2c';
@@ -1518,20 +2030,17 @@
                         <h2>${mentor.name}</h2>
                         <div style="color: #2c6e2c; font-weight: 600; margin: 8px 0;">${mentor.company} · ${mentor.position}</div>
                         
-                        <!-- 评分和标签 -->
                         <div style="display: flex; justify-content: center; gap: 20px; margin: 16px 0;">
                             <div><span style="color: #f5b342;">★</span> ${mentor.rating || 5.0}</div>
                             <div><i class="fas fa-clock"></i> ${mentor.experience || '5年'}</div>
                             <div><i class="fas fa-user-check"></i> 已辅导${Math.floor(Math.random() * 100) + 50}人</div>
                         </div>
 
-                        <!-- 导师介绍 -->
                         <div style="text-align: left; margin: 20px 0;">
                             <h4 style="margin-bottom: 8px;">📋 个人介绍</h4>
                             <p style="color: #4f6b4f;">现任${mentor.company}${mentor.position}，${mentor.experience || '5年'}工作经验。擅长${mentor.position}面试辅导、职业规划、简历优化。已帮助50+学员成功入职一线大厂。</p>
                         </div>
 
-                        <!-- 可提供服务 -->
                         <div style="text-align: left; margin: 20px 0;">
                             <h4 style="margin-bottom: 8px;">🎯 可提供服务</h4>
                             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -1543,7 +2052,6 @@
                             </div>
                         </div>
 
-                        <!-- 学员评价 -->
                         <div style="text-align: left; margin: 20px 0;">
                             <h4 style="margin-bottom: 8px;">💬 学员评价</h4>
                             <div class="card" style="background: #f8fcf7;">
@@ -1558,7 +2066,6 @@
                             </div>
                         </div>
 
-                        <!-- 预约按钮 -->
                         <div style="display: flex; gap: 12px; margin-top: 20px;">
                             <button class="btn-primary" style="flex: 1;" onclick="bookConsult(${mentor.id}, '咨询')">
                                 <i class="fas fa-calendar-check"></i> 预约咨询
@@ -1576,7 +2083,6 @@
         function bookConsult(mentorId, type) {
             const mentor = mentors.find(m => m.id === mentorId);
             
-            // 创建预约弹窗
             const modal = document.createElement('div');
             modal.className = 'modal';
             modal.innerHTML = `
@@ -1616,7 +2122,6 @@
                 return;
             }
 
-            // 检查积分
             if ((currentUser?.points || 0) < 50) {
                 alert('积分不足，请先获取积分（发帖、评论可得积分）');
                 document.querySelector('.modal')?.remove();
@@ -1638,7 +2143,6 @@
                 if (response.ok) {
                     alert('预约成功！已扣除50积分');
                     
-                    // 更新积分
                     currentUser.points -= 50;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
@@ -1656,7 +2160,6 @@
         function renderProfile(container) {
             container.innerHTML = `
                 <div style="padding: 8px 0 20px;">
-                    <!-- 用户信息卡片 -->
                     <div class="card" style="text-align: center;">
                         <div class="avatar" style="margin: 0 auto 16px; width: 80px; height: 80px; font-size: 40px;">
                             ${(currentUser?.nickname || currentUser?.username || 'U').charAt(0)}
@@ -1664,7 +2167,6 @@
                         <h2>${currentUser?.nickname || currentUser?.username}</h2>
                         <div style="color: #4f6b4f; margin: 8px 0;">用户名: ${currentUser?.username}</div>
                         
-                        <!-- 积分统计 -->
                         <div style="display: flex; justify-content: space-around; margin: 20px 0;">
                             <div>
                                 <div style="font-size: 28px; font-weight: 700; color: #2c6e2c;">${currentUser?.points || 0}</div>
@@ -1680,7 +2182,6 @@
                             </div>
                         </div>
 
-                        <!-- 积分获取方式 -->
                         <div style="background: #f0f7ee; border-radius: 16px; padding: 16px; text-align: left;">
                             <div style="font-weight: 600; margin-bottom: 8px;">🎁 积分获取方式</div>
                             <div style="display: flex; justify-content: space-between; font-size: 14px; margin: 4px 0;">
@@ -1702,7 +2203,6 @@
                         </div>
                     </div>
 
-                    <!-- 功能菜单 -->
                     <div class="card">
                         <div class="forum-item" onclick="showMyPosts()">
                             <span><i class="fas fa-file-alt" style="color: #2c6e2c;"></i> 我的帖子</span>
@@ -1726,7 +2226,6 @@
                         </div>
                     </div>
 
-                    <!-- 退出登录 -->
                     <button class="btn-outline" style="margin-top: 20px;" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i> 退出登录
                     </button>
@@ -1767,7 +2266,6 @@
 
         // ==================== 我的预约 ====================
         function showMyBookings() {
-            // 模拟数据
             const bookings = [
                 { id: 1, mentor: '赵老师', type: '咨询', time: '2026-03-07 10:00', status: '待确认' },
                 { id: 2, mentor: '钱工', type: '模拟面试', time: '2026-03-08 14:00', status: '已确认' }
@@ -1799,7 +2297,6 @@
 
         // ==================== 积分明细 ====================
         function showPointsDetail() {
-            // 模拟积分明细
             const pointsLog = [
                 { action: '发布面经', points: 20, time: '2026-03-06' },
                 { action: '发表评论', points: 5, time: '2026-03-06' },
@@ -1854,12 +2351,14 @@
                             <span><i class="fas fa-bell"></i> 消息通知</span>
                             <label class="switch">
                                 <input type="checkbox" checked>
+                                <span class="slider"></span>
                             </label>
                         </div>
                         <div class="forum-item">
                             <span><i class="fas fa-moon"></i> 深色模式</span>
                             <label class="switch">
                                 <input type="checkbox">
+                                <span class="slider"></span>
                             </label>
                         </div>
                         <div class="forum-item" onclick="alert('修改密码功能开发中')">
@@ -1882,7 +2381,6 @@
                 </div>
             `;
 
-            // 添加开关样式
             const style = document.createElement('style');
             style.textContent = `
                 .switch {
@@ -1930,12 +2428,292 @@
 
         // ==================== 每日签到 ====================
         async function dailyCheckin() {
-            // 模拟签到功能
             alert('签到成功！获得10积分');
             currentUser.points += 10;
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             loadTabContent('profile');
         }
+
+        // ==================== 论坛功能 ====================
+
+// 渲染论坛主页面
+function renderForum(container) {
+    container.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+            <div class="section-title">
+                <i class="fas fa-comments"></i> 求职论坛
+                <span style="margin-left: auto;">
+                    <button class="company-tag" onclick="showNewPostForm()" style="border: none;">
+                        <i class="fas fa-pen"></i> 发帖
+                    </button>
+                </span>
+            </div>
+            
+            <!-- 搜索框 -->
+            <div style="background: #f0f7ee; border-radius: 40px; padding: 12px 18px; margin-bottom: 20px; display: flex; gap: 10px;">
+                <i class="fas fa-search" style="color: #2c6e2c;"></i>
+                <input type="text" id="search-forum" placeholder="搜索帖子..." style="border: none; background: transparent; width: 100%; outline: none;">
+            </div>
+
+            <!-- 分类标签 -->
+            <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto;">
+                <span class="company-tag" onclick="filterForum('all')">全部</span>
+                <span class="company-tag" onclick="filterForum('面经')">面经</span>
+                <span class="company-tag" onclick="filterForum('求助')">求助</span>
+                <span class="company-tag" onclick="filterForum('吐槽')">吐槽</span>
+                <span class="company-tag" onclick="filterForum('招聘')">招聘</span>
+            </div>
+
+            <!-- 帖子列表 -->
+            <div id="forum-posts-list">
+                ${forumPosts.map(post => renderForumPost(post)).join('')}
+            </div>
+        </div>
+    `;
+
+    // 搜索功能
+    document.getElementById('search-forum')?.addEventListener('input', function(e) {
+        const keyword = e.target.value.toLowerCase();
+        const filtered = forumPosts.filter(post => 
+            post.title?.toLowerCase().includes(keyword) ||
+            post.content?.toLowerCase().includes(keyword)
+        );
+        document.getElementById('forum-posts-list').innerHTML = filtered.map(p => renderForumPost(p)).join('');
+    });
+}
+
+// 渲染单个帖子项
+function renderForumPost(post) {
+    return `
+        <div class="card" style="cursor: pointer; margin-bottom: 12px;" onclick="showPostDetail(${post.id})">
+            <div style="display: flex; justify-content: space-between;">
+                <span class="company-tag">${post.category || '面经'}</span>
+                <span style="color: #8aa08a; font-size: 12px;">${new Date(post.created_at || Date.now()).toLocaleDateString()}</span>
+            </div>
+            <div style="font-weight: 600; font-size: 16px; margin: 8px 0;">${post.title}</div>
+            <div style="color: #4f6b4f; margin-bottom: 12px;">${(post.content || '').substring(0, 60)}...</div>
+            <div style="display: flex; gap: 16px; font-size: 12px; color: #8aa08a;">
+                <span><i class="fas fa-user"></i> ${post.author_name || '匿名'}</span>
+                <span><i class="fas fa-comment"></i> ${post.reply_count || 0} 回复</span>
+                <span><i class="fas fa-heart"></i> ${post.likes || 0} 点赞</span>
+            </div>
+        </div>
+    `;
+}
+
+// 显示帖子详情
+function showPostDetail(postId) {
+    const post = forumPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const comments = post.comments || [
+        { id: 1, user: '面试达人', content: '感谢分享！很有帮助', time: '2026-03-06', likes: 3 },
+        { id: 2, user: '求职小白', content: '请问具体怎么准备呢？', time: '2026-03-06', likes: 1 }
+    ];
+
+    const contentDiv = document.getElementById('main-content');
+    contentDiv.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+            <div class="back-btn" onclick="renderForum(document.getElementById('main-content'))">
+                <i class="fas fa-arrow-left"></i> 返回论坛
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="company-tag">${post.category || '面经'}</span>
+                    <span style="color: #8aa08a;">${new Date(post.created_at || Date.now()).toLocaleDateString()}</span>
+                </div>
+                
+                <h2 style="margin: 16px 0 8px;">${post.title}</h2>
+                
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <div class="avatar" style="width: 40px; height: 40px; font-size: 20px;">${(post.author_name || 'U').charAt(0)}</div>
+                    <div>
+                        <div style="font-weight: 600;">${post.author_name || '匿名用户'}</div>
+                        <div style="font-size: 12px; color: #8aa08a;">积分 ${post.author_points || 100}</div>
+                    </div>
+                </div>
+
+                <div style="background: #f8fcf7; padding: 20px; border-radius: 16px; margin: 16px 0; white-space: pre-line;">
+                    ${post.content || '暂无内容'}
+                </div>
+
+                <div style="display: flex; gap: 20px; margin: 20px 0;">
+                    <span style="cursor: pointer;" onclick="likePost(${post.id})">
+                        <i class="fas fa-heart" style="color: #f5b342;"></i> ${post.likes || 0} 点赞
+                    </span>
+                    <span style="cursor: pointer;" onclick="collectPost(${post.id})">
+                        <i class="fas fa-star" style="color: #f5b342;"></i> 收藏
+                    </span>
+                    <span style="cursor: pointer;" onclick="sharePost(${post.id})">
+                        <i class="fas fa-share" style="color: #2c6e2c;"></i> 分享
+                    </span>
+                </div>
+
+                <!-- 评论区 -->
+                <h4 style="margin: 24px 0 12px;">评论 (${comments.length})</h4>
+                
+                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                    <div class="avatar" style="width: 36px; height: 36px; font-size: 18px;">${(currentUser?.nickname || '我').charAt(0)}</div>
+                    <div style="flex: 1;">
+                        <textarea id="new-comment" class="input-field" placeholder="写下你的评论..." rows="2" style="margin-bottom: 8px;"></textarea>
+                        <button class="btn-primary" style="padding: 10px;" onclick="postComment(${post.id})">发表评论</button>
+                    </div>
+                </div>
+
+                ${comments.map(comment => `
+                    <div class="comment-item">
+                        <div style="display: flex; gap: 12px;">
+                            <div class="avatar" style="width: 32px; height: 32px; font-size: 16px;">${comment.user.charAt(0)}</div>
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="font-weight: 600;">${comment.user}</span>
+                                    <span style="font-size: 12px; color: #8aa08a;">${comment.time}</span>
+                                </div>
+                                <div style="margin: 4px 0 8px;">${comment.content}</div>
+                                <div style="display: flex; gap: 16px; font-size: 12px;">
+                                    <span style="cursor: pointer;" onclick="likeComment(${comment.id})">
+                                        <i class="fas fa-thumbs-up"></i> ${comment.likes || 0}
+                                    </span>
+                                    <span style="cursor: pointer;" onclick="replyComment(${comment.id})">
+                                        <i class="fas fa-reply"></i> 回复
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// 显示发帖表单
+function showNewPostForm() {
+    const contentDiv = document.getElementById('main-content');
+    contentDiv.innerHTML = `
+        <div style="padding: 8px 0 20px;">
+            <div class="back-btn" onclick="renderForum(document.getElementById('main-content'))">
+                <i class="fas fa-arrow-left"></i> 返回论坛
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">发布新帖</h3>
+                
+                <select id="post-category" class="input-field">
+                    <option value="面经">面经分享</option>
+                    <option value="求助">求助咨询</option>
+                    <option value="吐槽">求职吐槽</option>
+                    <option value="招聘">招聘信息</option>
+                    <option value="其他">其他</option>
+                </select>
+                
+                <input type="text" id="post-title" class="input-field" placeholder="标题">
+                
+                <textarea id="post-content" class="input-field" placeholder="内容..." rows="8"></textarea>
+                
+                <div style="margin-bottom: 16px;">
+                    <span style="color: #2c6e2c; font-weight: 600;">发布可得20积分</span>
+                </div>
+                
+                <button class="btn-primary" onclick="submitNewPost()">发布帖子</button>
+            </div>
+        </div>
+    `;
+}
+
+// 提交新帖子
+async function submitNewPost() {
+    const category = document.getElementById('post-category')?.value;
+    const title = document.getElementById('post-title')?.value;
+    const content = document.getElementById('post-content')?.value;
+
+    if (!title || !content) {
+        alert('请填写标题和内容');
+        return;
+    }
+
+    const newPost = {
+        id: forumPosts.length + 1,
+        title: title,
+        content: content,
+        category: category,
+        author_name: currentUser?.nickname || currentUser?.username,
+        author_id: currentUser?.id,
+        reply_count: 0,
+        likes: 0,
+        created_at: new Date(),
+        comments: []
+    };
+
+    forumPosts.unshift(newPost);
+    
+    // 增加用户积分
+    if (currentUser) {
+        currentUser.points = (currentUser.points || 0) + 20;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    }
+
+    alert('发布成功！获得20积分');
+    renderForum(document.getElementById('main-content'));
+}
+
+// 筛选论坛帖子
+function filterForum(category) {
+    if (category === 'all') {
+        document.getElementById('forum-posts-list').innerHTML = forumPosts.map(p => renderForumPost(p)).join('');
+    } else {
+        const filtered = forumPosts.filter(p => p.category === category);
+        document.getElementById('forum-posts-list').innerHTML = filtered.map(p => renderForumPost(p)).join('');
+    }
+    
+    document.querySelectorAll('.company-tag').forEach(tag => {
+        tag.style.background = tag.innerText === category ? '#2c6e2c' : '#e8f3e5';
+        tag.style.color = tag.innerText === category ? 'white' : '#2c6e2c';
+    });
+}
+
+// 点赞帖子
+function likePost(postId) {
+    alert('点赞成功！');
+}
+
+// 收藏帖子
+function collectPost(postId) {
+    alert('收藏成功！');
+}
+
+// 分享帖子
+function sharePost(postId) {
+    alert('分享功能开发中');
+}
+
+// 发表评论
+function postComment(postId) {
+    const comment = document.getElementById('new-comment')?.value;
+    if (!comment) {
+        alert('请输入评论内容');
+        return;
+    }
+    alert('评论成功！获得5积分');
+    document.getElementById('new-comment').value = '';
+    
+    // 增加用户积分
+    if (currentUser) {
+        currentUser.points = (currentUser.points || 0) + 5;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    }
+}
+
+// 点赞评论
+function likeComment(commentId) {
+    alert('点赞成功！');
+}
+
+// 回复评论
+function replyComment(commentId) {
+    alert('回复功能开发中');
+}
 
         // ==================== 初始化 ====================
         init();
