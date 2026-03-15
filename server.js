@@ -14,9 +14,12 @@ const db = mysql.createPool({
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '20060710Dy',
     database: process.env.DB_NAME || 'defaultdb',
+    port: 21702,  // 明确指定端口
     waitForConnections: true,
     connectionLimit: 10,
-    ssl: process.env.DB_SSL ? { rejectUnauthorized: false } : undefined
+    ssl: {
+        rejectUnauthorized: false  // Aiven 需要 SSL
+    }
 });
 
 // 测试数据库连接并输出详细错误
