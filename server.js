@@ -10,15 +10,15 @@ app.use(express.json());
 
 // ==================== 数据库配置 ====================
 const db = mysql.createPool({
-    host: process.env.DB_HOST,  // 现在是 IP 地址
+    host: process.env.DB_HOST,           // 只填 IP: 139.59.29.204
+    port: parseInt(process.env.DB_PORT) || 21702,  // 单独端口变量
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: 21702,
     waitForConnections: true,
     connectionLimit: 10,
     ssl: {
-        rejectUnauthorized: false  // Aiven 必须要有 SSL
+        rejectUnauthorized: false
     }
 });
 
@@ -36,13 +36,13 @@ db.getConnection((err, connection) => {
         console.log('✅ 数据库连接成功');
         console.log('✅ 连接信息:', {
             host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
             database: process.env.DB_NAME,
             user: process.env.DB_USER
         });
         connection.release();
     }
 });
-
 // ==================== 根路由（测试用）====================
 app.get('/', (req, res) => {
     res.json({ 
