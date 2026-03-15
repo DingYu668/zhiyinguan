@@ -1,4 +1,4 @@
-// server.js - 职引官完整版后端
+// server.js - 职引官完整版后端（适配Render版）
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -8,14 +8,35 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==================== 数据库配置 ====================
+// ==================== 数据库配置（修改为环境变量）====================
 const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '20060710Dy',  // 改成你的密码
-    database: 'zhiguanguan',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '20060710Dy',
+    database: process.env.DB_NAME || 'zhiguanguan',
     waitForConnections: true,
-    connectionLimit: 10
+    connectionLimit: 10,
+    // 添加SSL配置（Render需要）
+    ssl: process.env.DB_SSL ? { rejectUnauthorized: false } : undefined
+});
+
+// 测试数据库连接
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ 数据库连接失败:', err.message);
+    } else {
+        console.log('✅ 数据库连接成功');
+        connection.release();
+    }
+});
+
+// ==================== 根路由（测试用）====================
+app.get('/', (req, res) => {
+    res.json({ 
+        message: '职引官API运行中',
+        status: 'online',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // ==================== 用户API ====================
@@ -42,6 +63,7 @@ app.post('/api/register', async (req, res) => {
 
         res.json({ success: true, message: '注册成功' });
     } catch (error) {
+        console.error('注册错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -67,9 +89,11 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: '用户名或密码错误' });
         }
 
-        delete user.password;
-        res.json({ success: true, user });
+        // 不返回密码
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ success: true, user: userWithoutPassword });
     } catch (error) {
+        console.error('登录错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -97,6 +121,7 @@ app.get('/api/knowledge', async (req, res) => {
         );
         res.json(rows);
     } catch (error) {
+        console.error('获取知识库错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -122,7 +147,7 @@ app.get('/api/knowledge/:id', async (req, res) => {
             'SELECT * FROM knowledge_base WHERE id = ?',
             [req.params.id]
         );
-        res.json(rows[0]);
+        res.json(rows[0] || {});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -142,6 +167,7 @@ app.get('/api/forum/posts', async (req, res) => {
         );
         res.json(rows);
     } catch (error) {
+        console.error('获取帖子错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -164,6 +190,7 @@ app.post('/api/forum/post', async (req, res) => {
         
         res.json({ success: true, id: result.insertId });
     } catch (error) {
+        console.error('创建帖子错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -227,6 +254,7 @@ app.get('/api/mentors', async (req, res) => {
         );
         res.json(rows);
     } catch (error) {
+        console.error('获取导师错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -238,7 +266,7 @@ app.get('/api/mentors/:id', async (req, res) => {
             'SELECT * FROM mentors WHERE id = ?',
             [req.params.id]
         );
-        res.json(rows[0]);
+        res.json(rows[0] || {});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -272,6 +300,7 @@ app.post('/api/interview/save', async (req, res) => {
         );
         res.json({ success: true });
     } catch (error) {
+        console.error('保存面试记录错误:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -289,8 +318,25 @@ app.get('/api/interview/history/:userId', async (req, res) => {
     }
 });
 
-// 启动服务器
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`✅ 后端服务运行在 http://localhost:${PORT}`);
+// ==================== 健康检查 ====================
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        database: db ? 'connected' : 'disconnected'
+    });
+});
+
+// ==================== 404处理 ====================
+app.use((req, res) => {
+    res.status(404).json({ error: '接口不存在' });
+});
+
+// ==================== 启动服务器（修改为适配Render）====================
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ 职引官后端服务运行在端口 ${PORT}`);
+    console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 本地访问: http://localhost:${PORT}`);
+    console.log(`🔗 远程访问: https://zhiyinguan.onrender.com`);
 });
