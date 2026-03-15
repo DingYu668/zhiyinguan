@@ -7,7 +7,12 @@ const bcrypt = require('bcrypt');
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+// 添加 /api 前缀支持
+app.use('/api', (req, res, next) => {
+  // 把 /api/xxx 转发到 /xxx
+  req.url = req.url.replace('/api', '');
+  next();
+});
 // ==================== 数据库配置 ====================
 const db = mysql.createPool({
     host: process.env.DB_HOST,           // 只填 IP: 139.59.29.204
